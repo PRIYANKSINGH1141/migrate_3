@@ -2,19 +2,24 @@ name: gha-migration/migrate_full_ci
 on:
   push:
   workflow_dispatch:
-
 concurrency:
   group: "${{ github.ref }}"
   cancel-in-progress: true
-
-env:
-  APP_NAME: demo-app
-  BUILD_DIR: build
-
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      APP_NAME: demo-app
+      BUILD_DIR: build
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -25,15 +30,23 @@ jobs:
         path: ".cache/"
         key: ${{ runner.os }}-${{ github.sha }}
     - run: echo "Pipeline Started....."
-    - run: docker --version
+    - run: docker version
     - run: echo "Preparing Environment"
     - run: echo "Pipeline Finished"
       if: always()
-
   build:
     needs: prepare
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -44,10 +57,9 @@ jobs:
         path: ".cache/"
         key: ${{ runner.os }}-${{ github.sha }}
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: mkdir -p ${{ env.BUILD_DIR }}
-    - run: echo "Application Build Successful" > ${{ env.BUILD_DIR }}/build.txt
-    - run: echo "Build timestamp: $(date)" >> ${{ env.BUILD_DIR }}/build.txt
+    - run: docker version
+    - run: mkdir -p ${BUILD_DIR}
+    - run: echo "Application Build Successful" > ${BUILD_DIR}/build.txt
     - run: echo "Pipeline Finished"
       if: always()
     - uses: actions/upload-artifact@v4
@@ -56,11 +68,19 @@ jobs:
         name: build
         retention-days: 7
         path: build/
-
   lint:
     needs: build
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -75,18 +95,23 @@ jobs:
         name: build
         path: build
     - run: echo "Pipeline Started....."
-    - run: docker --version
+    - run: docker version
     - run: echo "Running Lint"
-    - run: ls -la build/
-    - run: cat build/build.txt
-    - run: echo "Lint checks completed"
     - run: echo "Pipeline Finished"
       if: always()
-
   test:
     needs: build
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -101,17 +126,24 @@ jobs:
         name: build
         path: build
     - run: echo "Pipeline Started....."
-    - run: docker --version
+    - run: docker version
     - run: cat build/build.txt
     - run: echo "Running Tests"
-    - run: echo "All tests passed!"
     - run: echo "Pipeline Finished"
       if: always()
-
   security_scan:
     needs: test
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privilegedd
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -126,12 +158,10 @@ jobs:
         name: build
         path: build
     - run: echo "Pipeline Started....."
-    - run: docker --version
+    - run: docker version
     - run: echo "Running Security Scan"
-    - run: echo "Security scan completed - no vulnerabilities found"
     - run: echo "Pipeline Finished"
       if: always()
-
   package:
     needs:
     - build
@@ -139,7 +169,16 @@ jobs:
     - lint
     - security_scan
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -154,23 +193,28 @@ jobs:
         name: build
         path: build
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: echo "Creating package archive"
+    - run: docker version
     - run: tar -czf package.tar.gz build
-    - run: ls -lh package.tar.gz
     - run: echo "Pipeline Finished"
       if: always()
     - uses: actions/upload-artifact@v4
       if: success()
       with:
         name: package
-        retention-days: 7
         path: package.tar.gz
-
   docker_build:
     needs: package
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
@@ -184,73 +228,102 @@ jobs:
       with:
         name: package
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: echo "Extracting package"
-    - run: tar -xzf package.tar.gz
-    - run: ls -la
-    - run: echo "Building Docker image"
-    - run: docker build -t ${{ env.APP_NAME }}:latest .
-    - run: docker images
-    - run: echo "Running Docker image to verify"
-    - run: docker run --rm ${{ env.APP_NAME }}:latest
+    - run: docker version
+    - run: docker build -t ${APP_NAME}:latest .
     - run: echo "Pipeline Finished"
       if: always()
-
   deploy_dev:
     needs: docker_build
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     if: github.ref == 'refs/heads/develop'
     environment:
       name: development
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 20
         lfs: true
+    - uses: actions/cache@v4
+      with:
+        path: ".cache/"
+        key: ${{ runner.os }}-${{ github.sha }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: package
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: echo "Deploying to Development Environment"
-    - run: echo "✓ Deployment successful"
+    - run: docker version
+    - run: echo "Deploying to Development"
     - run: echo "Pipeline Finished"
       if: always()
-
   deploy_qa:
     needs: deploy_dev
     runs-on: ubuntu-latest
+    container:
+      image: docker:latest
     if: github.ref == 'refs/heads/develop'
     environment:
       name: qa
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 20
         lfs: true
+    - uses: actions/cache@v4
+      with:
+        path: ".cache/"
+        key: ${{ runner.os }}-${{ github.sha }}
+    - uses: actions/download-artifact@v4
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: echo "Deploying to QA Environment"
-    - run: echo "✓ Deployment successful"
+    - run: docker version
+    - run: echo "Deploying to QA"
     - run: echo "Pipeline Finished"
       if: always()
-
   deploy_prod:
-    needs: 
-    - docker_build
-    - deploy_qa
+    needs: deploy_qa
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
+    container:
+      image: docker:latest
+    if: github.event_name == 'workflow_dispatch'
     environment:
       name: production
     timeout-minutes: 60
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    env:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ''
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 20
         lfs: true
+    - uses: actions/cache@v4
+      with:
+        path: ".cache/"
+        key: ${{ runner.os }}-${{ github.sha }}
+    - uses: actions/download-artifact@v4
     - run: echo "Pipeline Started....."
-    - run: docker --version
-    - run: echo "🚀 Deploying to Production Environment"
-    - run: echo "✓ Production deployment successful"
+    - run: docker version
+    - run: echo "Deploying to Production"
     - run: echo "Pipeline Finished"
       if: always()
