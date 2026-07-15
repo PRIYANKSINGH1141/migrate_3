@@ -235,9 +235,11 @@ jobs:
       if: always()
 
   deploy_prod:
-    needs: deploy_qa
+    needs: 
+    - docker_build
+    - deploy_qa
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
     environment:
       name: production
     timeout-minutes: 60
