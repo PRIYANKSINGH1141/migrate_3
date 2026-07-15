@@ -2,9 +2,6 @@ name: gha-migration/migrate_full_ci
 
 on:
   push:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 concurrency:
@@ -18,11 +15,9 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cache
         uses: actions/cache@v4
@@ -30,42 +25,26 @@ jobs:
           path: .cache
           key: ${{ runner.os }}-${{ github.sha }}
 
-      - name: Start Pipeline
-        run: echo "Pipeline Started"
-
-      - name: Docker Version
-        run: docker --version
-
       - name: Prepare Environment
         run: |
+          echo "Pipeline Started"
+          docker --version
           mkdir -p $BUILD_DIR
           echo "Environment Ready"
-
-      - name: Finish
-        if: always()
-        run: echo "Prepare Job Finished"
 
   build:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: .cache
-          key: ${{ runner.os }}-${{ github.sha }}
-
-      - name: Build Application
-        run: |
+      - run: |
           mkdir -p $BUILD_DIR
           echo "Application Build Successful" > $BUILD_DIR/build.txt
           echo "Build Time: $(date)" >> $BUILD_DIR/build.txt
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: build
           path: build
@@ -75,35 +54,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           name: build
           path: build
 
-      - name: Run Lint
-        run: |
-          ls -la build
+      - run: |
+          echo "Running Lint..."
           cat build/build.txt
-          echo "Lint Successful"
+          echo "Lint Passed"
 
   test:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           name: build
           path: build
 
-      - name: Run Tests
-        run: |
-          cat build/build.txt
+      - run: |
           echo "Running Tests..."
+          cat build/build.txt
           echo "All Tests Passed"
 
   security_scan:
@@ -111,15 +84,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           name: build
           path: build
 
-      - name: Security Scan
-        run: |
+      - run: |
           echo "Running Security Scan..."
           echo "No Vulnerabilities Found"
 
@@ -137,9 +107,7 @@ jobs:
           name: build
           path: build
 
-      - name: Create Package
-        run: |
-          tar -czf package.tar.gz build
+      - run: tar -czf package.tar.gz build
 
       - uses: actions/upload-artifact@v4
         with:
@@ -157,51 +125,46 @@ jobs:
         with:
           name: package
 
-      - name: Extract Package
-        run: tar -xzf package.tar.gz
+      - run: tar -xzf package.tar.gz
 
       - name: Build Docker Image
-        run: |
-          docker build -t $APP_NAME:latest .
+        run: docker build -t $APP_NAME:latest .
 
-      - name: Verify Image
+      - name: Verify Docker Image
         run: docker image inspect $APP_NAME:latest
 
-      - name: Run Container
+      - name: Run Docker Container
         run: docker run --rm $APP_NAME:latest
 
   deploy_dev:
-    if: github.ref == 'refs/heads/develop'
     needs: docker_build
     runs-on: ubuntu-latest
     environment: development
 
     steps:
-      - name: Deploy Development
-        run: |
+      - run: |
           echo "Deploying to Development..."
-          echo "Deployment Successful"
+          sleep 2
+          echo "Development Deployment Successful"
 
   deploy_qa:
-    if: github.ref == 'refs/heads/develop'
     needs: deploy_dev
     runs-on: ubuntu-latest
     environment: qa
 
     steps:
-      - name: Deploy QA
-        run: |
+      - run: |
           echo "Deploying to QA..."
-          echo "Deployment Successful"
+          sleep 2
+          echo "QA Deployment Successful"
 
   deploy_prod:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop'
     needs: deploy_qa
     runs-on: ubuntu-latest
     environment: production
 
     steps:
-      - name: Deploy Production
-        run: |
+      - run: |
           echo "Deploying to Production..."
+          sleep 2
           echo "Production Deployment Successful"
