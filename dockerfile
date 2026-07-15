@@ -1,10 +1,6 @@
-FROM alpine:latest
+FROM ubuntu:22.04
 
-# Set working directory
-WORKDIR /app
+RUN apt-get update && \
+    apt-get install -y curl git
 
-# Copy build artifacts
-COPY build/ /app/
-
-# Default command
-CMD ["sh", "-c", "echo 'Application container running' && cat /app/build.txt"]
+CMD ["echo", "Docker Image Built Successfully"]
