@@ -65,7 +65,9 @@ jobs:
           echo "Lint Passed"
 
   test:
-    needs: build
+    needs:
+      - build
+      - lint
     runs-on: ubuntu-latest
 
     steps:
@@ -95,7 +97,6 @@ jobs:
 
   package:
     needs:
-      - lint
       - test
       - security_scan
 
