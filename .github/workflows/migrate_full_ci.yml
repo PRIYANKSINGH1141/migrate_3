@@ -48,8 +48,8 @@ jobs:
           mkdir -p $BUILD_DIR
           echo "Application Build Successful" > $BUILD_DIR/build.txt
           echo "Build Time: $(date)" >> $BUILD_DIR/build.txt
-          echo "$TEST_SECRET"
-          echo "$TEST_VAR"
+          echo "Secret: $TEST_SECRET"
+          echo "ENV_varible_UI: $TEST_VAR"
   
 
       - uses: actions/upload-artifact@v4
