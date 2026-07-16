@@ -36,6 +36,10 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
 
+    env:
+      BUILD_DIR: build
+      TEST_SECRET: ${{ secrets.TEST_SECRET }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +47,8 @@ jobs:
           mkdir -p $BUILD_DIR
           echo "Application Build Successful" > $BUILD_DIR/build.txt
           echo "Build Time: $(date)" >> $BUILD_DIR/build.txt
-          "${{ secrets.TEST_SECRET }}"
+          echo "$TEST_SECRET"
+  
 
       - uses: actions/upload-artifact@v4
         with:
