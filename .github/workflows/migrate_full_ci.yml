@@ -1,7 +1,7 @@
 name: gha-migration/migrate_full_ci
 
 on:
-  push:
+ ## push:
   workflow_dispatch:
     inputs:
       TARGET_ENV:
