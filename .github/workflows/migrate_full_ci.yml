@@ -39,6 +39,7 @@ jobs:
     env:
       BUILD_DIR: build
       TEST_SECRET: ${{ secrets.TEST_SECRET }}
+      TEST_VAR: ${{ vars.TEST_VAR }}
 
     steps:
       - uses: actions/checkout@v4
