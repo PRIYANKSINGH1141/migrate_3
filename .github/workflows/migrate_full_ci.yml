@@ -35,6 +35,7 @@ jobs:
   build:
     needs: prepare
     runs-on: ubuntu-latest
+    name: secret_var:${{ vars.TEST_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
