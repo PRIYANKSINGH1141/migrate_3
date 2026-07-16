@@ -49,6 +49,7 @@ jobs:
           echo "Application Build Successful" > $BUILD_DIR/build.txt
           echo "Build Time: $(date)" >> $BUILD_DIR/build.txt
           echo "$TEST_SECRET"
+          echo "$TEST_VAR"
   
 
       - uses: actions/upload-artifact@v4
