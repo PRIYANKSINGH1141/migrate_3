@@ -3,6 +3,15 @@ name: gha-migration/migrate_full_ci
 on:
   push:
   workflow_dispatch:
+    inputs:
+      TARGET_ENV:
+        description: 'Select the deployment target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,6 +49,7 @@ jobs:
       BUILD_DIR: build
       TEST_SECRET: ${{ secrets.TEST_SECRET }}
       TEST_VAR: ${{ vars.TEST_VAR }}
+      TARGET_ENV: ${{ inputs.TARGET_ENV || 'staging' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +60,7 @@ jobs:
           echo "Build Time: $(date)" >> $BUILD_DIR/build.txt
           echo "Secret: $TEST_SECRET"
           echo "ENV_varible_UI: $TEST_VAR"
+          echo "Deploying code to environment: $TARGET_ENV"
   
 
       - uses: actions/upload-artifact@v4
